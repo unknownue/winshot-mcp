@@ -41,3 +41,5 @@ coverage.xml
 # Project specific
 temp_client.py
 *.log 
+
+tmp/
