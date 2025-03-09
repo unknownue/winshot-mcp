@@ -17,6 +17,7 @@ import signal
 import time
 import uuid
 import traceback
+import asyncio
 from datetime import datetime
 from typing import Dict, Any, Optional, List, Union
 from winshot import WindowShot
@@ -48,9 +49,6 @@ except ImportError:
     print("For more information, visit: https://modelcontextprotocol.io/")
     exit(1)
 
-# Initialize FastMCP server
-mcp = FastMCP("Winshot MCP Server")
-
 # Initialize WindowShot
 window_shot = WindowShot()
 
@@ -64,6 +62,13 @@ def get_uptime() -> str:
     hours, remainder = divmod(uptime_seconds, 3600)
     minutes, seconds = divmod(remainder, 60)
     return f"{int(hours)}h {int(minutes)}m {int(seconds)}s"
+
+# Initialize FastMCP server with initialization delay
+# This helps ensure the server is fully initialized before accepting requests
+mcp = FastMCP(
+    "Winshot MCP Server",
+    initialization_delay=1.0  # Add a 1-second delay for initialization
+)
 
 @mcp.tool()
 def get_server_status() -> Dict[str, Any]:
@@ -145,32 +150,67 @@ def list_windows() -> Dict[str, Any]:
         }
 
 @mcp.tool()
-def capture_window(window_id: str) -> Dict[str, Any]:
+def capture_window(app_name: str) -> Dict[str, Any]:
     """
-    Capture screenshot of a specific window.
+    Capture screenshot of a specific application window.
     
     Args:
-        window_id: ID or title of the window to capture
+        app_name: Name of the application to capture
         
     Returns:
         A dictionary containing the captured image data and format
     """
     try:
+        # Get list of windows
+        windows = window_shot.get_window_list()
+        
+        # Find window by application name (case insensitive)
+        window_id = None
+        for window in windows:
+            if window["process"].lower() == app_name.lower():
+                window_id = window["id"]
+                break
+        
+        # If no exact match, try partial match
+        if window_id is None:
+            for window in windows:
+                if app_name.lower() in window["process"].lower():
+                    window_id = window["id"]
+                    break
+        
+        # If still no match, return error
+        if window_id is None:
+            logger.error(f"No window found for application: {app_name}")
+            return {
+                "error": f"No window found for application: {app_name}",
+                "image_data": None,
+                "format": None
+            }
+        
+        logger.info(f"Found window ID {window_id} for application {app_name}")
+        
         # Capture window screenshot
         image_data = window_shot.capture_window(window_id)
         
         # Convert image data to base64 if it's not already
         if not isinstance(image_data, str):
-            image_data = base64.b64encode(image_data).decode('utf-8')
+            # Check if it's a PIL Image object
+            if hasattr(image_data, 'format') and hasattr(image_data, 'save'):
+                # Use the get_screenshot_as_base64 method to convert PIL Image to base64
+                image_data = window_shot.get_screenshot_as_base64(image_data)
+            else:
+                # If it's bytes or another format, encode it directly
+                image_data = base64.b64encode(image_data).decode('utf-8')
 
         return {
             "image_data": image_data,
-            "format": "png"
+            "format": "png",
+            "window_id": window_id
         }
     except Exception as e:
-        logger.error(f"Error capturing window: {str(e)}\n{traceback.format_exc()}")
+        logger.error(f"Error capturing window for application {app_name}: {str(e)}\n{traceback.format_exc()}")
         return {
-            "error": f"Failed to capture window: {str(e)}",
+            "error": f"Failed to capture window for application {app_name}: {str(e)}",
             "image_data": None,
             "format": None
         }
@@ -187,7 +227,7 @@ def test_tools() -> str:
     
     1. First, use the get_server_status tool to check if the server is running properly.
     2. Then, use the list_windows tool to see all available windows.
-    3. Use the capture_window tool with a window_id from the list to capture a screenshot.
+    3. Use the capture_window tool with an application name (e.g., "Firefox", "Chrome", "Finder") to capture a screenshot.
     4. You can also use the echo_message tool with a message of your choice.
     5. Finally, use the get_current_time tool to get the current server time.
     
@@ -204,17 +244,22 @@ def signal_handler(sig, frame):
 signal.signal(signal.SIGINT, signal_handler)  # Ctrl+C
 signal.signal(signal.SIGTERM, signal_handler)  # Termination signal
 
-# Log server startup information
-logger.info(f"Starting Winshot MCP server with SSE transport on port {port}")
-logger.info(f"SSE endpoint: http://localhost:{port}/sse")
-logger.info("Press Ctrl+C to stop the server")
+# Main function to run the server
+def main():
+    # Log server startup information
+    logger.info(f"Starting Winshot MCP server with SSE transport on port {port}")
+    logger.info(f"SSE endpoint: http://localhost:{port}/sse")
+    logger.info("Press Ctrl+C to stop the server")
 
-try:
-    # Run the server with SSE transport
-    mcp.run(transport='sse')
-except KeyboardInterrupt:
-    logger.info("Server stopped by user (Ctrl+C)")
-except Exception as e:
-    logger.error(f"Error running server: {str(e)}")
-finally:
-    logger.info("Server shutdown complete") 
+    try:
+        # Run the server with SSE transport
+        mcp.run(transport='sse')
+    except KeyboardInterrupt:
+        logger.info("Server stopped by user (Ctrl+C)")
+    except Exception as e:
+        logger.error(f"Error running server: {str(e)}\n{traceback.format_exc()}")
+    finally:
+        logger.info("Server shutdown complete")
+
+if __name__ == "__main__":
+    main() 
