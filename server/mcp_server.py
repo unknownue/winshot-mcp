@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-MCP SSE Server - Server implementation for Model-Client Protocol with window screenshot support
+MCP Server - Server implementation for Model-Client Protocol with window screenshot support
 
 This module provides a server that implements the Model-Client Protocol (MCP)
 for communication with Language Learning Models using Server-Sent Events (SSE),
@@ -15,7 +15,7 @@ import sys
 import os
 import signal
 from typing import Dict, Any
-from winshot import WindowShot
+from core.winshot import WindowShot
 
 # Configure logging
 logging.basicConfig(

@@ -13,6 +13,27 @@ This project implements the MCP protocol with window screenshot functionality, e
 - Send window screenshots to LLMs via the MCP protocol
 - Integrate with Cursor's agent mode
 
+## Project Structure
+
+The project is organized into three main components:
+
+- **Core**: Core window screenshot functionality
+  - `core/winshot.py`: Core window screenshot implementation
+
+- **Server**: MCP server implementation
+  - `server/mcp_server.py`: MCP server with window screenshot support
+  - `server/__main__.py`: Entry point for running the server
+
+- **Client**: Client implementations and utilities
+  - `client/mcp_client.py`: MCP client implementation
+  - `client/cursor_adapter.py`: Adapter connecting Cursor with MCP
+  - `client/cursor_winshot.py`: Cursor-specific window screenshot integration
+  - `client/demo.py`: Demo script showcasing window screenshot functionality
+  - `client/__main__.py`: Entry point for running the client demo
+
+- **Main Entry Point**: 
+  - `__main__.py`: Unified entry point for both server and client components
+
 ## Installation
 
 1. Install dependencies:
@@ -28,40 +49,62 @@ This project implements the MCP protocol with window screenshot functionality, e
      - You can also manually grant permission in System Settings > Privacy & Security > Screen Recording
      - If using an IDE (like VS Code), ensure the IDE has permission
 
-3. Run the window screenshot demo:
-   ```
-   python winshot_demo.py
-   ```
+## Usage
 
-## Using with Cursor
+### Using the Unified Entry Point
 
-To use window screenshot functionality in Cursor's agent mode:
+Run the server:
+```
+python . server
+```
 
-1. Start the MCP server:
-   ```
-   python mcp_sse_server.py
-   ```
+Run the client:
+```
+python . client
+```
 
-2. In Cursor, you can use the following commands in agent mode:
-   - `list_windows()` - List all available windows
-   - `capture_window("Window Title")` - Capture a screenshot of a window with the given title
-   - `capture_window(window_index)` - Capture a screenshot of a window by index
+Specify a custom port for the server:
+```
+python . server --port 8766
+```
 
-## Project Structure
+### Running the Server Directly
 
-- `winshot.py`: Core window screenshot functionality
-- `mcp_sse_server.py`: MCP server with window screenshot support
-- `mcp_client.py`: MCP client implementation
-- `cursor_mcp_adapter.py`: Adapter connecting Cursor with MCP
-- `cursor_winshot.py`: Cursor-specific window screenshot integration
-- `winshot_demo.py`: Demo script showcasing window screenshot functionality
+Start the MCP server:
+```
+python -m server
+```
+
+Or:
+```
+python server/mcp_server.py
+```
+
+### Running the Demo Client Directly
+
+Run the demo client:
+```
+python -m client
+```
+
+Or:
+```
+python client/demo.py
+```
+
+### Using with Cursor
+
+In Cursor's agent mode, you can use the following commands:
+- `list_windows()` - List all available windows
+- `capture_window("Window Title")` - Capture a screenshot of a window with the given title
+- `capture_window(window_index)` - Capture a screenshot of a window by index
 
 ## Demo
 
-Running `python winshot_demo.py` will start an interactive demo that:
-1. Lists all available windows on your system
-2. Allows you to select a window to screenshot
-3. Initiates the screenshot process (**Note: Current version may require you to manually click on the window to be captured**)
+Running the client demo will:
+1. List all available windows on your system
+2. Allow you to select a window to screenshot
+3. Initiate the screenshot process (**Note: Current version may require you to manually click on the window to be captured**)
 
 The interactive prompts during the screenshot process are part of macOS security mechanisms, ensuring user control over screen capture. Screenshots are saved in the current directory with filenames starting with `window_shot_`.
 
@@ -72,7 +115,7 @@ If you encounter issues with screenshots on macOS:
 1. Confirm screen recording permission is granted to your terminal or IDE
 2. **During the screenshot process, click on the window you want to capture when prompted**
 3. Try different screenshot methods: the code automatically attempts three different methods
-4. For windows that cannot be captured automatically, you may need to modify the screenshot parameters in `winshot.py`
+4. For windows that cannot be captured automatically, you may need to modify the screenshot parameters in `core/winshot.py`
 
 ### Known Limitations
 
