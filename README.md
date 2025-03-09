@@ -6,6 +6,8 @@ A Model-Client Protocol (MCP) window screenshot integration tool for Cursor, all
 
 This project implements the MCP protocol with window screenshot functionality, enabling Large Language Models (LLMs) to visually observe and interact with application UIs. By capturing screenshots of specific windows, LLMs can better understand the user's environment and provide more context-aware assistance.
 
+> ⚠️ **Important Cursor Limitation**: Currently Cursor's agent mode cannot directly process images via URIs/links. Cursor only supports viewing images when referenced with the `@file` syntax (e.g., `@/path/to/image.png`). This means that while our server provides optimized HTTP URIs, Cursor's LLM cannot directly "see" these images. You may need to manually download images or develop additional integrations to convert URIs to local file references for Cursor to process them properly.
+
 ## Features
 
 - List all active windows on Windows, macOS, and Linux
@@ -91,8 +93,6 @@ Configuration options:
 
 This approach significantly reduces data transfer size and memory usage, especially for large screenshots.
 
-> ⚠️ **Important Cursor Limitation**: Currently Cursor's agent mode cannot directly process images via URIs/links. Cursor only supports viewing images when referenced with the `@file` syntax (e.g., `@/path/to/image.png`). This means that while our server provides optimized HTTP URIs, Cursor's LLM cannot directly "see" these images. You may need to manually download images or develop additional integrations to convert URIs to local file references for Cursor to process them properly.
-
 ### Using the Unified Entry Point
 
 Run the server:
@@ -155,78 +155,6 @@ In Cursor's agent mode, you can use the following commands:
 - `list_windows()` - List all available windows
 - `capture_window("Window Title")` - Capture a screenshot of a window with the given title
 - `capture_window(window_index)` - Capture a screenshot of a window by index
-
-#### Viewing Screenshots in Cursor
-
-Since Cursor only supports viewing images through the `@file` syntax, the server is designed to help with this limitation:
-
-1. **Start the server with an accessible directory**:
-   ```
-   python . server --tmp-dir /path/accessible/to/cursor
-   ```
-
-2. **Capture a window**:
-   ```python
-   result = capture_window("Chrome")
-   ```
-
-3. **Use the provided Cursor syntax to view the image**:
-   ```python
-   # The result contains a cursor_syntax field ready to use
-   print(f"Screenshot: {result['cursor_syntax']}")
-   
-   # Example output:
-   # Screenshot: @/path/accessible/to/cursor/window_shot_Chrome_1234567890_abcdef12.png
-   ```
-
-4. **Full response example**:
-   ```json
-   {
-     "uri": "http://localhost:8766/img/a1b2c3d4e5f67890",
-     "format": "png",
-     "window_id": "Chrome:MainWindow",
-     "window_title": "Chrome",
-     "hash": "a1b2c3d4e5f67890",
-     "local_file_path": "/path/accessible/to/cursor/window_shot_Chrome_1234567890_abcdef12.png",
-     "cursor_syntax": "@/path/accessible/to/cursor/window_shot_Chrome_1234567890_abcdef12.png"
-   }
-   ```
-
-This approach ensures that both the HTTP URI (for general use) and local file path (for Cursor use) are available.
-
-#### Example Cursor Workflow
-
-Here's a complete example of how you might interact with screenshots in Cursor:
-
-```
-# 1. First, list all available windows
-windows = list_windows()
-print("Available windows:", [w["title"] for w in windows["windows"]])
-
-# 2. Capture a specific window
-result = capture_window("Firefox")
-
-# 3. Check if capture was successful
-if "error" in result:
-    print(f"Error: {result['error']}")
-else:
-    # 4. View the screenshot in Cursor
-    print(f"Screenshot captured successfully!")
-    print(f"Viewing screenshot: {result['cursor_syntax']}")
-    
-    # 5. Ask LLM to analyze the screenshot
-    print("What can you see in this screenshot?")
-    
-    # LLM will be able to view and analyze the image using the @file reference
-```
-
-When you run the above code in Cursor:
-1. The server captures the Firefox window screenshot
-2. The screenshot is saved to your specified `--tmp-dir`
-3. Cursor displays the image when it encounters the `result['cursor_syntax']` value
-4. The LLM can analyze and comment on what it sees in the screenshot
-
-This seamless integration makes it easy to use screenshots in your conversations with Cursor's LLM.
 
 ## Demo
 

@@ -118,7 +118,7 @@ class MCPClient:
         uri = content.get("uri")
         image_format = content.get("format")
         
-        # 如果有 URI，尝试下载图像
+        # If URI exists, try to download the image
         image_data = None
         if uri:
             try:
@@ -166,7 +166,7 @@ async def main():
     for i, window in enumerate(window_list, 1):
         print(f"{i}. {window['title']} ({window['process']})")
     
-    # 如果有窗口，尝试截图并下载第一个窗口
+    # If there are windows, try to capture and download the first window
     if window_list:
         window_id = window_list[0]['id']
         print(f"\nCapturing screenshot of: {window_list[0]['title']}")
@@ -179,7 +179,7 @@ async def main():
             if image_data:
                 print(f"Downloaded image: {len(image_data)} bytes")
                 
-                # 可以保存到文件
+                # Can save to file
                 with open(f"test_screenshot.{image_format.lower()}", "wb") as f:
                     f.write(image_data)
                 print("Saved image to test_screenshot.png")
