@@ -51,11 +51,25 @@ The project is organized into three main components:
 
 ## Usage
 
+### Image Size Configuration
+
+The server supports configuring the maximum image dimensions and file size to optimize performance and memory usage:
+
+- `--max-image-dimension <pixels>` - Maximum width or height of captured screenshots (default: 1200 pixels)
+- `--max-file-size-mb <size>` - Maximum file size for screenshot data (default: 5 MB)
+
+Reducing these values can improve performance and decrease memory usage, especially when working with large screens or high-resolution displays.
+
 ### Using the Unified Entry Point
 
 Run the server:
 ```
 python . server
+```
+
+Run the server with custom image size settings:
+```
+python . server --max-image-dimension 800 --max-file-size-mb 2
 ```
 
 Run the client:
@@ -73,6 +87,11 @@ python . server --port 8766
 Start the MCP server:
 ```
 python -m server
+```
+
+Start the server with custom image size settings:
+```
+python -m server --max-image-dimension 800 --max-file-size-mb 2
 ```
 
 Or:
@@ -116,12 +135,14 @@ If you encounter issues with screenshots on macOS:
 2. **During the screenshot process, click on the window you want to capture when prompted**
 3. Try different screenshot methods: the code automatically attempts three different methods
 4. For windows that cannot be captured automatically, you may need to modify the screenshot parameters in `core/winshot.py`
+5. **Memory or performance issues**: Try reducing the image size with `--max-image-dimension` and `--max-file-size-mb` options
 
 ### Known Limitations
 
 - **User intervention required**: The current version on macOS may require manual window clicking to complete the screenshot. This is a result of system security limitations and is currently considered acceptable.
 - Some windows may not be locatable by ID, in which case the foreground window will be captured.
 - Some applications' windows may not be captured correctly, especially those using non-standard window management.
+- **Large screens/high-resolution displays**: May require adjusting the maximum image dimensions and file size to prevent memory issues.
 
 ## Protocol Details
 

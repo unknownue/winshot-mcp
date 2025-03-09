@@ -12,7 +12,11 @@ import platform
 import subprocess
 import base64
 import io
+import logging
 from typing import Optional, List, Dict, Any, Union, Tuple
+
+# Configure logging
+logger = logging.getLogger("winshot")
 
 try:
     from PIL import Image, ImageGrab
@@ -24,13 +28,21 @@ except ImportError:
 class WindowShot:
     """Window screenshot utility for capturing screenshots of specific application windows"""
     
-    def __init__(self):
-        """Initialize the window screenshot utility"""
+    def __init__(self, max_image_dimension=1200, max_file_size_mb=5):
+        """
+        Initialize the window screenshot utility
+        
+        Args:
+            max_image_dimension: Maximum width or height of captured screenshots (in pixels)
+            max_file_size_mb: Maximum file size of captured screenshots (in MB)
+        """
         self.system = platform.system()  # Get operating system type
+        self.max_image_dimension = max_image_dimension
+        self.max_file_size_bytes = max_file_size_mb * 1024 * 1024
         
         # Check for required dependencies
         if not HAS_PIL:
-            print("Warning: PIL/Pillow is not installed. Image processing will fail.")
+            logger.warning("PIL/Pillow is not installed. Image processing will fail.")
     
     def get_window_list(self) -> List[Dict[str, str]]:
         """
@@ -47,12 +59,12 @@ class WindowShot:
             
             # If first approach failed, try simpler approach
             if not windows:
-                print("First approach failed, trying simpler window detection...")
+                logger.debug("First approach failed, trying simpler window detection...")
                 windows = self._get_macos_window_list_v2()
                 
             # If still no windows, try the simplest approach
             if not windows:
-                print("Second approach failed, trying basic app detection...")
+                logger.debug("Second approach failed, trying basic app detection...")
                 windows = self._get_macos_window_list_v3()
         
         elif self.system == "Windows":
@@ -68,7 +80,7 @@ class WindowShot:
                             "process": "Unknown"  # Need additional processing to get process name
                         })
             except ImportError:
-                print("Error: pygetwindow library is not installed. Please install with: pip install pygetwindow")
+                logger.error("pygetwindow library is not installed. Please install with: pip install pygetwindow")
         
         elif self.system == "Linux":
             # Use xdotool to get Linux window list
@@ -89,7 +101,7 @@ class WindowShot:
                                 "process": "Unknown"  # Need additional processing to get process name
                             })
             except FileNotFoundError:
-                print("Error: xdotool is not installed. Please install with: sudo apt-get install xdotool")
+                logger.error("xdotool is not installed. Please install with: sudo apt-get install xdotool")
         
         return windows
         
@@ -119,8 +131,6 @@ class WindowShot:
             end tell
             """
             result = subprocess.run(["osascript", "-e", script], capture_output=True, text=True)
-            print(f"AppleScript result: {result.stdout}")
-            print(f"AppleScript error (if any): {result.stderr}")
             
             # Parse AppleScript output
             if result.stdout:
@@ -132,7 +142,7 @@ class WindowShot:
                         win = lines[i+1].replace("window:", "").strip()
                         windows.append({"id": f"{proc}:{win}", "title": win, "process": proc})
         except Exception as e:
-            print(f"Error in first macOS window detection approach: {e}")
+            logger.error(f"Error in first macOS window detection approach: {e}")
         
         return windows
     
@@ -162,8 +172,6 @@ class WindowShot:
             end tell
             """
             result = subprocess.run(["osascript", "-e", script], capture_output=True, text=True)
-            print(f"AppleScript (v2) result: {result.stdout}")
-            print(f"AppleScript (v2) error (if any): {result.stderr}")
             
             if result.stdout:
                 window_strings = result.stdout.strip().split(", ")
@@ -174,7 +182,7 @@ class WindowShot:
                         win = parts[1].strip()
                         windows.append({"id": f"{proc}:{win}", "title": win, "process": proc})
         except Exception as e:
-            print(f"Error in second macOS window detection approach: {e}")
+            logger.error(f"Error in second macOS window detection approach: {e}")
         
         return windows
     
@@ -194,7 +202,6 @@ class WindowShot:
             end tell
             """
             result = subprocess.run(["osascript", "-e", script], capture_output=True, text=True)
-            print(f"AppleScript (v3) result: {result.stdout}")
             
             if result.stdout:
                 apps = result.stdout.strip().split(", ")
@@ -207,11 +214,11 @@ class WindowShot:
                             "process": app
                         })
         except Exception as e:
-            print(f"Error in third macOS window detection approach: {e}")
+            logger.error(f"Error in third macOS window detection approach: {e}")
         
         # If all else fails, add at least one entry for testing
         if not windows:
-            print("All detection methods failed. Adding a fallback entry for testing.")
+            logger.warning("All detection methods failed. Adding a fallback entry for testing.")
             windows.append({
                 "id": "Finder:MainWindow",
                 "title": "Finder",
@@ -231,7 +238,7 @@ class WindowShot:
             PIL.Image.Image: Window screenshot, or None if failed
         """
         if not HAS_PIL:
-            print("Error: PIL/Pillow is not installed. Cannot capture screenshot.")
+            logger.error("PIL/Pillow is not installed. Cannot capture screenshot.")
             return None
             
         try:
@@ -248,11 +255,11 @@ class WindowShot:
                 screenshot = self._capture_macos_window_v1(proc_name, win_name)
                 
                 if screenshot is None:
-                    print("First capture approach failed, trying simpler capture...")
+                    logger.debug("First capture approach failed, trying simpler capture...")
                     screenshot = self._capture_macos_window_v2(proc_name)
                 
                 if screenshot is None:
-                    print("Second capture approach failed, trying full screen capture...")
+                    logger.debug("Second capture approach failed, trying full screen capture...")
                     screenshot = self._capture_macos_window_v3()
                 
                 return screenshot
@@ -269,7 +276,7 @@ class WindowShot:
                                                      window.top+window.height))
                     return screenshot
                 except ImportError:
-                    print("Error: pygetwindow library is not installed. Please install with: pip install pygetwindow")
+                    logger.error("pygetwindow library is not installed. Please install with: pip install pygetwindow")
             
             elif self.system == "Linux":
                 # Use xdotool and import to capture Linux window
@@ -288,10 +295,10 @@ class WindowShot:
                     
                     return screenshot
                 except FileNotFoundError:
-                    print("Error: Required tools are not installed. Please install with: sudo apt-get install xdotool imagemagick")
+                    logger.error("Required tools are not installed. Please install with: sudo apt-get install xdotool imagemagick")
         
         except Exception as e:
-            print(f"Screenshot capture failed: {e}")
+            logger.error(f"Screenshot capture failed: {e}")
         
         return None
     
@@ -304,181 +311,118 @@ class WindowShot:
             win_name: Window name
             
         Returns:
-            Optional[Image.Image]: Captured window or None if failed
+            Optional[Image.Image]: Window screenshot or None if failed
         """
         try:
             # Create a temporary file to save the screenshot
             temp_file = f"/tmp/window_screenshot_{int(time.time())}.png"
             
-            # Try to find the window using AppleScript
+            # Activate the application and move to front
             script = f"""
+            tell application "{proc_name}"
+                activate
+                delay 0.5
+            end tell
             tell application "System Events"
                 set frontmost of process "{proc_name}" to true
-                delay 0.5
-                set windowList to every window of process "{proc_name}"
-                repeat with aWindow in windowList
-                    if name of aWindow contains "{win_name}" then
-                        set frontWindow to aWindow
-                        return id of frontWindow
-                    end if
-                end repeat
-                -- If no match found, try to get first window
-                if (count of windowList) > 0 then
-                    set frontWindow to item 1 of windowList
-                    return id of frontWindow
-                end if
-                return ""
             end tell
             """
-            result = subprocess.run(["osascript", "-e", script], capture_output=True, text=True)
-            window_id = result.stdout.strip()
+            subprocess.run(["osascript", "-e", script], capture_output=True, text=True)
             
-            if window_id:
-                # Capture the specific window using the -l flag (window by ID)
-                subprocess.run(["screencapture", "-l", window_id, temp_file], 
-                             capture_output=True, text=True)
-            else:
-                # Fallback to window selection by application name
-                activate_script = f"""
-                tell application "{proc_name}"
-                    activate
-                    delay 0.5
+            # Wait for app to activate
+            time.sleep(0.5)
+            
+            # Try to capture the window using screencapture with -l flag (window by ID/name)
+            # First, find the window ID
+            window_id_script = f"""
+            tell application "System Events"
+                tell process "{proc_name}"
+                    set winID to id of window 1
+                    return winID
                 end tell
-                """
-                subprocess.run(["osascript", "-e", activate_script], capture_output=True, text=True)
-                time.sleep(0.5)
+            end tell
+            """
+            
+            # Get window ID
+            try:
+                window_id_result = subprocess.run(["osascript", "-e", window_id_script], 
+                                            capture_output=True, text=True)
+                window_id = window_id_result.stdout.strip()
                 
-                # Try to get the window id of frontmost window
-                frontmost_script = f"""
-                tell application "System Events"
-                    set frontApp to first application process whose frontmost is true
-                    if name of frontApp is "{proc_name}" then
-                        set frontWindow to first window of frontApp
-                        return id of frontWindow
-                    end if
-                    return ""
-                end tell
-                """
-                result = subprocess.run(["osascript", "-e", frontmost_script], 
-                                     capture_output=True, text=True)
-                window_id = result.stdout.strip()
-                
+                # Capture window by ID if we got one
                 if window_id:
-                    # Use the window ID for capture
                     subprocess.run(["screencapture", "-l", window_id, temp_file], 
                                  capture_output=True, text=True)
-                else:
-                    # Last resort: use -w to capture the frontmost window (non-interactive)
-                    subprocess.run(["screencapture", "-w", temp_file], 
-                                 capture_output=True, text=True)
+            except Exception as window_ex:
+                # If can't get window ID, try by window title
+                logger.debug(f"Error getting window ID: {window_ex}")
+                # Try a more generic approach with standard screencapture
+                subprocess.run(["screencapture", "-w", temp_file], 
+                             capture_output=True, text=True)
             
-            # Load the captured image
+            # Check if screenshot was successfully saved
             if os.path.exists(temp_file) and os.path.getsize(temp_file) > 0:
+                # Load the screenshot
                 screenshot = Image.open(temp_file)
+                
                 # Clean up the temporary file
-                try:
-                    os.remove(temp_file)
-                except:
-                    pass
+                os.remove(temp_file)
+                
                 return screenshot
             else:
-                print(f"Screenshot file not created or empty: {temp_file}")
+                logger.debug(f"Screenshot file not created or empty: {temp_file}")
+                return None
+                
         except Exception as e:
-            print(f"Error in first macOS capture approach: {e}")
-        
-        return None
+            logger.error(f"Error in first macOS capture approach: {e}")
+            return None
     
     def _capture_macos_window_v2(self, app_name: str) -> Optional[Image.Image]:
         """
-        Second approach to capture a macOS window - activate the app and capture its window
+        Second approach to capture a macOS window using screencapture utility
         
         Args:
             app_name: Application name
             
         Returns:
-            Optional[Image.Image]: Captured window or None if failed
+            Optional[Image.Image]: Window screenshot or None if failed
         """
         try:
             # Create a temporary file to save the screenshot
             temp_file = f"/tmp/window_screenshot_{int(time.time())}.png"
             
-            # Use AppleScript to activate the app and then screencapture to capture the window
+            # Activate the application
             script = f"""
             tell application "{app_name}"
                 activate
                 delay 0.5
             end tell
             """
-            # First activate the application
             subprocess.run(["osascript", "-e", script], capture_output=True, text=True)
+            
+            # Wait for app to activate
             time.sleep(0.5)
             
-            # Then use screencapture with -l flag to capture window by window id
-            try:
-                # Get the frontmost window ID
-                frontmost_script = f"""
-                tell application "System Events"
-                    tell process "{app_name}"
-                        set frontWindow to first window whose value of attribute "AXMain" is true
-                        return id of frontWindow
-                    end tell
-                end tell
-                """
-                result = subprocess.run(["osascript", "-e", frontmost_script], 
-                                      capture_output=True, text=True)
-                window_id = result.stdout.strip()
-                
-                if window_id:
-                    # Capture the specific window using the -l flag (window by ID)
-                    subprocess.run(["screencapture", "-l", window_id, temp_file], 
-                                 capture_output=True, text=True)
-                else:
-                    # Alternative approach - try to get the frontmost app's window
-                    alt_script = f"""
-                    tell application "System Events"
-                        set frontApp to first application process whose frontmost is true
-                        if frontApp exists then
-                            set frontWindow to first window of frontApp
-                            return id of frontWindow
-                        end if
-                        return ""
-                    end tell
-                    """
-                    result = subprocess.run(["osascript", "-e", alt_script], 
-                                         capture_output=True, text=True)
-                    window_id = result.stdout.strip()
-                    
-                    if window_id:
-                        # Use the window ID for capture
-                        subprocess.run(["screencapture", "-l", window_id, temp_file], 
-                                     capture_output=True, text=True)
-                    else:
-                        # Fallback to capturing the frontmost window (non-interactive)
-                        subprocess.run(["screencapture", "-w", temp_file], 
-                                     capture_output=True, text=True)
-            except Exception as window_ex:
-                print(f"Error getting window ID: {window_ex}")
-                # Fallback to capturing the frontmost window (non-interactive)
-                subprocess.run(["screencapture", "-w", temp_file], 
-                             capture_output=True, text=True)
+            # Capture the frontmost window
+            subprocess.run(["screencapture", "-w", temp_file], 
+                         capture_output=True, text=True)
             
-            # Load the captured image
+            # Check if screenshot was successfully saved
             if os.path.exists(temp_file) and os.path.getsize(temp_file) > 0:
+                # Load the screenshot
                 screenshot = Image.open(temp_file)
+                
                 # Clean up the temporary file
-                try:
-                    os.remove(temp_file)
-                except:
-                    pass
+                os.remove(temp_file)
+                
                 return screenshot
             else:
-                print(f"Screenshot file not created or empty: {temp_file}")
+                logger.debug(f"Screenshot file not created or empty: {temp_file}")
                 return None
                 
         except Exception as e:
-            print(f"Error in second macOS capture approach: {e}")
-        
-        return None
+            logger.error(f"Error in second macOS capture approach: {e}")
+            return None
     
     def _capture_macos_window_v3(self) -> Optional[Image.Image]:
         """
@@ -491,32 +435,60 @@ class WindowShot:
             # Create a temporary file to save the screenshot
             temp_file = f"/tmp/window_screenshot_{int(time.time())}.png"
             
-            # Attempt to capture the active window with -W flag
-            # This is the most basic approach that should work in most cases
-            subprocess.run(["screencapture", "-W", temp_file], 
-                         capture_output=True, text=True)
+            # Attempt to capture the active window with -W flag using timeout
+            # First check if the temp directory exists
+            temp_dir = os.path.dirname(temp_file)
+            if not os.path.exists(temp_dir):
+                os.makedirs(temp_dir)
             
-            # If that fails, fallback to full screen capture
+            # Run command with timeout
+            process = subprocess.Popen(["screencapture", "-W", temp_file], 
+                                      stdout=subprocess.PIPE,
+                                      stderr=subprocess.PIPE)
+            
+            # Wait for command to finish, with timeout
+            timeout = 15  # 15 seconds timeout
+            
+            try:
+                process.communicate(timeout=timeout)
+            except subprocess.TimeoutExpired:
+                # Kill the process
+                process.kill()
+                process.communicate()  # Clean up
+                # Try a full-screen capture as fallback
+                try:
+                    subprocess.run(["screencapture", temp_file], 
+                                  capture_output=True, 
+                                  timeout=10)  # 10 second timeout for full screen
+                except subprocess.TimeoutExpired:
+                    # Just continue and check if file exists
+                    pass
+            
+            # If active window capture fails, fallback to full screen capture
             if not os.path.exists(temp_file) or os.path.getsize(temp_file) == 0:
-                print("Active window capture failed, falling back to full screen capture...")
                 subprocess.run(["screencapture", temp_file], 
-                             capture_output=True, text=True)
+                              capture_output=True, text=True, timeout=10)
             
             # Load the captured image
             if os.path.exists(temp_file) and os.path.getsize(temp_file) > 0:
-                screenshot = Image.open(temp_file)
-                # Clean up the temporary file
                 try:
-                    os.remove(temp_file)
-                except:
+                    screenshot = Image.open(temp_file)
+                    
+                    # Clean up the temporary file
+                    try:
+                        os.remove(temp_file)
+                    except:
+                        pass
+                    return screenshot
+                except Exception:
                     pass
-                return screenshot
-            else:
-                print(f"Screenshot file not created or empty: {temp_file}")
-                # Last resort - use PIL's ImageGrab
+            
+            # Last resort - use PIL's ImageGrab
+            try:
                 return ImageGrab.grab()
-        except Exception as e:
-            print(f"Error in third macOS capture approach: {e}")
+            except:
+                pass
+        except:
             # Last resort - use PIL's ImageGrab
             try:
                 return ImageGrab.grab()
@@ -531,36 +503,105 @@ class WindowShot:
         
         Args:
             image: PIL Image object
-            path: Save path
+            path: Path to save the screenshot to
             
         Returns:
-            str: Path to the saved file
+            str: Path to the saved screenshot
         """
         if not HAS_PIL:
-            print("Error: PIL/Pillow is not installed. Cannot save screenshot.")
-            return None
+            logger.error("PIL/Pillow is not installed. Cannot save screenshot.")
+            return ""
             
+        # Save the image
         image.save(path)
-        return path
+        return os.path.abspath(path)
     
     def capture_and_save(self, window_id: str, save_path: Optional[str] = None) -> Optional[str]:
         """
-        Capture window screenshot and save to file
+        Capture a window screenshot and save it to a file
         
         Args:
-            window_id: Window ID
-            save_path: Save path, uses a temporary file if None
+            window_id: Window ID to capture
+            save_path: Path to save the screenshot to (default: generates a filename)
             
         Returns:
-            str: Path to the saved file, or None if failed
+            Optional[str]: Path to the saved screenshot, or None if failed
         """
+        if save_path is None:
+            save_path = f"window_shot_{int(time.time())}.png"
+            
         screenshot = self.capture_window(window_id)
         if screenshot:
-            if save_path is None:
-                save_path = f"window_shot_{int(time.time())}.png"
             return self.save_screenshot(screenshot, save_path)
         return None
+    
+    def _safe_resize_image(self, image: Image.Image, max_size: Optional[int] = None) -> Image.Image:
+        """
+        Safely resize an image to a maximum dimension while maintaining aspect ratio.
+        Handles edge cases and errors that might occur during normal resize operations.
         
+        Args:
+            image: PIL Image object to resize
+            max_size: Maximum width or height (in pixels), uses self.max_image_dimension if None
+            
+        Returns:
+            Resized PIL Image object
+        """
+        # Use class config if no specific size provided
+        if max_size is None:
+            max_size = self.max_image_dimension
+            
+        try:
+            width, height = image.size
+            
+            # If image is already smaller than max_size, return as is
+            if width <= max_size and height <= max_size:
+                return image
+                
+            # Calculate new dimensions
+            if width > height:
+                new_width = max_size
+                new_height = int(height * (max_size / width))
+            else:
+                new_height = max_size
+                new_width = int(width * (max_size / height))
+                
+            # Try standard resizing first
+            try:
+                return image.resize((new_width, new_height), Image.LANCZOS)
+            except:
+                # Try with thumbnail method, which is more robust
+                img_copy = image.copy()
+                img_copy.thumbnail((new_width, new_height), Image.LANCZOS)
+                return img_copy
+                
+        except:
+            # Create a new blank image with target size
+            try:
+                mode = image.mode if image.mode in ('RGB', 'RGBA') else 'RGB'
+                new_img = Image.new(mode, (min(width, max_size), min(height, max_size)), (255, 255, 255))
+                
+                # Attempt to paste the original image, scaled down
+                if width > max_size or height > max_size:
+                    # Calculate scaling factor to fit within max_size
+                    scale = min(max_size / width, max_size / height)
+                    scaled_width = int(width * scale)
+                    scaled_height = int(height * scale)
+                    
+                    # Create a scaled version using a very basic method
+                    try:
+                        # Try a basic averaging resize method
+                        scaled_img = image.resize((scaled_width, scaled_height), Image.NEAREST)
+                        new_img.paste(scaled_img, (0, 0))
+                    except:
+                        # Just return the blank canvas if all else fails
+                        pass
+                        
+                return new_img
+            except:
+                # If all else fails, return a small blank image
+                return Image.new('RGB', (800, 600), (255, 255, 255))
+
     def get_screenshot_as_base64(self, image: Image.Image, format: str = "PNG") -> Optional[str]:
         """
         Convert screenshot to base64-encoded string
@@ -573,14 +614,61 @@ class WindowShot:
             str: Base64-encoded image data, or None if failed
         """
         if not HAS_PIL:
-            print("Error: PIL/Pillow is not installed. Cannot process image.")
+            logger.error("PIL/Pillow is not installed. Cannot process image.")
             return None
             
         try:
+            # Check image size and resize if too large
+            original_width, original_height = image.size
+            
+            # Calculate if resizing is needed
+            if original_width > self.max_image_dimension or original_height > self.max_image_dimension:
+                # Use safe resize method
+                image = self._safe_resize_image(image)
+            
+            # Use optimized compression parameters based on format
             buffer = io.BytesIO()
-            image.save(buffer, format=format)
+            if format.upper() == "JPEG":
+                image.save(buffer, format="JPEG", quality=85, optimize=True)
+            elif format.upper() == "PNG":
+                # Convert to RGB if image has alpha channel (makes PNG smaller)
+                if image.mode == 'RGBA':
+                    # Create white background
+                    background = Image.new('RGB', image.size, (255, 255, 255))
+                    # Paste image with alpha channel on white background
+                    background.paste(image, mask=image.split()[3])
+                    image = background
+                
+                image.save(buffer, format="PNG", optimize=True, compress_level=9)
+            else:
+                image.save(buffer, format=format)
+                
+            buffer_size = len(buffer.getvalue())
+            
+            # Check if image is still too large
+            if buffer_size > self.max_file_size_bytes:
+                buffer = io.BytesIO()
+                
+                # Convert to RGB if needed
+                if image.mode != 'RGB':
+                    image = image.convert('RGB')
+                    
+                image.save(buffer, format="JPEG", quality=75, optimize=True)
+            
             image_data = base64.b64encode(buffer.getvalue()).decode("utf-8")
             return image_data
         except Exception as e:
-            print(f"Error converting image to base64: {e}")
-            return None 
+            logger.error(f"Error converting image to base64: {e}")
+            
+            # Try with a more aggressive image reduction as a last resort
+            try:
+                # Create a tiny thumbnail as last resort
+                thumb = image.copy()
+                thumb.thumbnail((800, 800), Image.LANCZOS)
+                
+                buffer = io.BytesIO()
+                thumb.save(buffer, format="JPEG", quality=70)
+                image_data = base64.b64encode(buffer.getvalue()).decode("utf-8")
+                return image_data
+            except:
+                return None 
