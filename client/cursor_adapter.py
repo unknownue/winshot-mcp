@@ -192,13 +192,14 @@ class CursorAdapter:
             print(f"Error saving screenshot: {str(e)}")
             return None
     
-    async def capture_and_save_window(self, window_id: str, filename: Optional[str] = None) -> Tuple[Optional[str], str]:
+    async def capture_and_save_window(self, window_id: str, filename: Optional[str] = None, save_locally: bool = True) -> Tuple[Optional[str], str]:
         """
         Capture window screenshot and save to file
         
         Args:
             window_id: ID of the window to capture
             filename: Optional filename to save to
+            save_locally: Whether to save the screenshot locally (default: True)
             
         Returns:
             Tuple of (file_path, status_message)
@@ -214,13 +215,16 @@ class CursorAdapter:
         if not image_data:
             return None, status
             
-        # Save screenshot
-        file_path = self.save_screenshot(image_data, filename)
-        
-        if not file_path:
-            return None, "Failed to save screenshot"
+        # Save screenshot if requested
+        if save_locally:
+            file_path = self.save_screenshot(image_data, filename)
             
-        return file_path, "Screenshot saved successfully"
+            if not file_path:
+                return None, "Failed to save screenshot"
+                
+            return file_path, "Screenshot saved successfully"
+        else:
+            return None, "Screenshot captured but not saved locally"
 
 async def main():
     """Test the Cursor adapter"""

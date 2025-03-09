@@ -35,13 +35,14 @@ async def run_window_list_demo():
         return []
 
 
-async def run_window_screenshot_demo(window_id: Optional[str] = None, windows: Optional[List[Dict]] = None):
+async def run_window_screenshot_demo(window_id: Optional[str] = None, windows: Optional[List[Dict]] = None, save_locally: bool = True):
     """
     Demonstrate window screenshot functionality
     
     Args:
         window_id: Optional window ID to capture
         windows: Optional list of windows
+        save_locally: Whether to save the screenshot locally (default: True)
     """
     print("\n=== Window Screenshot Demo ===")
     
@@ -76,11 +77,13 @@ async def run_window_screenshot_demo(window_id: Optional[str] = None, windows: O
     timestamp = int(time.time())
     filename = f"window_shot_{timestamp}.png"
     
-    print(f"Capturing window screenshot to {filename}...")
+    print(f"Capturing window screenshot...")
+    if save_locally:
+        print(f"Will save to {filename}")
     print("Note: You may need to click on the window to be captured when prompted")
     
     # Capture window
-    file_path, status = await adapter.capture_and_save_window(window_id, filename)
+    file_path, status = await adapter.capture_and_save_window(window_id, filename, save_locally)
     
     if file_path:
         print(f"Screenshot saved to: {file_path}")
@@ -96,7 +99,7 @@ async def run_window_screenshot_demo(window_id: Optional[str] = None, windows: O
         except Exception as e:
             print(f"Could not open image: {e}")
     else:
-        print(f"Failed to capture screenshot: {status}")
+        print(f"Screenshot status: {status}")
 
 
 async def main():
@@ -104,17 +107,18 @@ async def main():
     parser = argparse.ArgumentParser(description="Window Screenshot Demo")
     parser.add_argument("--list-only", action="store_true", help="Only list windows, don't capture")
     parser.add_argument("--window-id", help="Capture specific window ID")
+    parser.add_argument("--no-save", action="store_true", help="Don't save screenshot locally")
     
     args = parser.parse_args()
     
     if args.list_only:
         await run_window_list_demo()
     elif args.window_id:
-        await run_window_screenshot_demo(window_id=args.window_id)
+        await run_window_screenshot_demo(window_id=args.window_id, save_locally=not args.no_save)
     else:
         windows = await run_window_list_demo()
         if windows:
-            await run_window_screenshot_demo(windows=windows)
+            await run_window_screenshot_demo(windows=windows, save_locally=not args.no_save)
 
 
 if __name__ == "__main__":

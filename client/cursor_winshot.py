@@ -37,27 +37,29 @@ async def list_windows() -> List[Dict[str, str]]:
     adapter = get_adapter()
     return await adapter.get_window_list()
 
-async def capture_window(window_id: str, save_path: Optional[str] = None) -> Tuple[Optional[str], str]:
+async def capture_window(window_id: str, save_path: Optional[str] = None, save_locally: bool = True) -> Tuple[Optional[str], str]:
     """
     Capture screenshot of a specific window
     
     Args:
         window_id: ID of the window to capture
         save_path: Optional path to save the screenshot
+        save_locally: Whether to save the screenshot locally (default: True)
         
     Returns:
         Tuple of (file_path, status_message)
     """
     adapter = get_adapter()
-    return await adapter.capture_and_save_window(window_id, save_path)
+    return await adapter.capture_and_save_window(window_id, save_path, save_locally)
 
-async def capture_window_by_title(title_fragment: str, save_path: Optional[str] = None) -> Tuple[Optional[str], str]:
+async def capture_window_by_title(title_fragment: str, save_path: Optional[str] = None, save_locally: bool = True) -> Tuple[Optional[str], str]:
     """
     Capture screenshot of a window by title fragment
     
     Args:
         title_fragment: Fragment of the window title to match
         save_path: Optional path to save the screenshot
+        save_locally: Whether to save the screenshot locally (default: True)
         
     Returns:
         Tuple of (file_path, status_message)
@@ -90,7 +92,7 @@ async def capture_window_by_title(title_fragment: str, save_path: Optional[str] 
         return None, f"No window found matching '{title_fragment}'"
     
     # Capture window
-    file_path, status = await adapter.capture_and_save_window(window_id, save_path)
+    file_path, status = await adapter.capture_and_save_window(window_id, save_path, save_locally)
     
     if file_path:
         return file_path, f"Captured window: {window_title}"
@@ -106,31 +108,33 @@ def list_windows_sync() -> List[Dict[str, str]]:
     """
     return asyncio.run(list_windows())
 
-def capture_window_sync(window_id: str, save_path: Optional[str] = None) -> Tuple[Optional[str], str]:
+def capture_window_sync(window_id: str, save_path: Optional[str] = None, save_locally: bool = True) -> Tuple[Optional[str], str]:
     """
     Synchronous version of capture_window
     
     Args:
         window_id: ID of the window to capture
         save_path: Optional path to save the screenshot
+        save_locally: Whether to save the screenshot locally (default: True)
         
     Returns:
         Tuple of (file_path, status_message)
     """
-    return asyncio.run(capture_window(window_id, save_path))
+    return asyncio.run(capture_window(window_id, save_path, save_locally))
 
-def capture_window_by_title_sync(title_fragment: str, save_path: Optional[str] = None) -> Tuple[Optional[str], str]:
+def capture_window_by_title_sync(title_fragment: str, save_path: Optional[str] = None, save_locally: bool = True) -> Tuple[Optional[str], str]:
     """
     Synchronous version of capture_window_by_title
     
     Args:
         title_fragment: Fragment of the window title to match
         save_path: Optional path to save the screenshot
+        save_locally: Whether to save the screenshot locally (default: True)
         
     Returns:
         Tuple of (file_path, status_message)
     """
-    return asyncio.run(capture_window_by_title(title_fragment, save_path))
+    return asyncio.run(capture_window_by_title(title_fragment, save_path, save_locally))
 
 # Command-line interface
 async def main():

@@ -34,6 +34,8 @@ parser.add_argument('--max-image-dimension', type=int, default=1200,
                    help='Maximum dimension (width or height) for screenshots in pixels')
 parser.add_argument('--max-file-size-mb', type=int, default=5, 
                    help='Maximum file size for screenshots in MB')
+parser.add_argument('--save-locally', action='store_true', default=False,
+                   help='Whether to save screenshots locally on the server')
 args = parser.parse_args()
 
 # Set environment variable for SSE port
@@ -50,7 +52,8 @@ except ImportError:
 # Initialize WindowShot with configuration
 window_shot = WindowShot(
     max_image_dimension=args.max_image_dimension,
-    max_file_size_mb=args.max_file_size_mb
+    max_file_size_mb=args.max_file_size_mb,
+    save_locally=args.save_locally
 )
 
 # Initialize FastMCP server
@@ -135,6 +138,10 @@ def capture_window(app_name: str) -> Dict[str, Any]:
         if not isinstance(image_data, str):
             # Check if it's a PIL Image object
             if hasattr(image_data, 'format') and hasattr(image_data, 'save'):
+                # Get image size before conversion
+                width, height = image_data.size
+                logger.info(f"Screenshot size: {width}x{height} pixels")
+                
                 # Use the get_screenshot_as_base64 method to convert PIL Image to base64
                 image_data = window_shot.get_screenshot_as_base64(image_data)
             else:
@@ -180,6 +187,7 @@ def main():
     logger.info(f"Starting Winshot MCP server on port {port}")
     logger.info(f"Maximum image dimension: {args.max_image_dimension}px")
     logger.info(f"Maximum file size: {args.max_file_size_mb}MB")
+    logger.info(f"Save screenshots locally: {args.save_locally}")
     logger.info(f"SSE endpoint: http://localhost:{port}/sse")
     logger.info("Press Ctrl+C to stop the server")
 

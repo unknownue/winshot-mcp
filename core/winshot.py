@@ -28,17 +28,19 @@ except ImportError:
 class WindowShot:
     """Window screenshot utility for capturing screenshots of specific application windows"""
     
-    def __init__(self, max_image_dimension=1200, max_file_size_mb=5):
+    def __init__(self, max_image_dimension=1200, max_file_size_mb=5, save_locally=False):
         """
         Initialize the window screenshot utility
         
         Args:
             max_image_dimension: Maximum width or height of captured screenshots (in pixels)
             max_file_size_mb: Maximum file size of captured screenshots (in MB)
+            save_locally: Whether to save screenshots locally (default: False)
         """
         self.system = platform.system()  # Get operating system type
         self.max_image_dimension = max_image_dimension
         self.max_file_size_bytes = max_file_size_mb * 1024 * 1024
+        self.save_locally = save_locally
         
         # Check for required dependencies
         if not HAS_PIL:
@@ -262,6 +264,23 @@ class WindowShot:
                     logger.debug("Second capture approach failed, trying full screen capture...")
                     screenshot = self._capture_macos_window_v3()
                 
+                # Resize image if needed
+                if screenshot:
+                    width, height = screenshot.size
+                    logger.info(f"Original screenshot size: {width}x{height} pixels")
+                    if width > self.max_image_dimension or height > self.max_image_dimension:
+                        screenshot = self._safe_resize_image(screenshot)
+                        width, height = screenshot.size
+                        logger.info(f"Resized screenshot to: {width}x{height} pixels")
+                
+                # Save locally if requested
+                if screenshot and self.save_locally:
+                    timestamp = int(time.time())
+                    filename = f"window_shot_{timestamp}.png"
+                    width, height = screenshot.size
+                    logger.info(f"Saving local screenshot ({width}x{height} pixels) to {filename}")
+                    self.save_screenshot(screenshot, filename)
+                
                 return screenshot
             
             elif self.system == "Windows":
@@ -274,6 +293,24 @@ class WindowShot:
                     screenshot = ImageGrab.grab(bbox=(window.left, window.top, 
                                                      window.left+window.width, 
                                                      window.top+window.height))
+                    
+                    # Resize image if needed
+                    if screenshot:
+                        width, height = screenshot.size
+                        logger.info(f"Original screenshot size: {width}x{height} pixels")
+                        if width > self.max_image_dimension or height > self.max_image_dimension:
+                            screenshot = self._safe_resize_image(screenshot)
+                            width, height = screenshot.size
+                            logger.info(f"Resized screenshot to: {width}x{height} pixels")
+                    
+                    # Save locally if requested
+                    if screenshot and self.save_locally:
+                        timestamp = int(time.time())
+                        filename = f"window_shot_{timestamp}.png"
+                        width, height = screenshot.size
+                        logger.info(f"Saving local screenshot ({width}x{height} pixels) to {filename}")
+                        self.save_screenshot(screenshot, filename)
+                    
                     return screenshot
                 except ImportError:
                     logger.error("pygetwindow library is not installed. Please install with: pip install pygetwindow")
@@ -291,6 +328,24 @@ class WindowShot:
                     
                     # Read screenshot
                     screenshot = Image.open(temp_file)
+                    
+                    # Resize image if needed
+                    if screenshot:
+                        width, height = screenshot.size
+                        logger.info(f"Original screenshot size: {width}x{height} pixels")
+                        if width > self.max_image_dimension or height > self.max_image_dimension:
+                            screenshot = self._safe_resize_image(screenshot)
+                            width, height = screenshot.size
+                            logger.info(f"Resized screenshot to: {width}x{height} pixels")
+                    
+                    # Save locally if requested
+                    if screenshot and self.save_locally:
+                        timestamp = int(time.time())
+                        filename = f"window_shot_{timestamp}.png"
+                        width, height = screenshot.size
+                        logger.info(f"Saving local screenshot ({width}x{height} pixels) to {filename}")
+                        self.save_screenshot(screenshot, filename)
+                    
                     os.remove(temp_file)  # Delete temporary file
                     
                     return screenshot
