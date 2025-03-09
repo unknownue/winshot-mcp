@@ -1,90 +1,88 @@
 # Winshot MCP
 
-一个为Cursor实现的Model-Client Protocol (MCP)窗口截图集成工具，允许Cursor的agent模式捕获和分析应用程序窗口。
+A Model-Client Protocol (MCP) window screenshot integration tool for Cursor, allowing Cursor's agent mode to capture and analyze application windows.
 
-## 概述
+## Overview
 
-本项目实现了具有窗口截图功能的MCP协议，使大型语言模型(LLM)能够可视化观察和与应用程序UI交互。通过捕获特定窗口的截图，LLM可以更好地理解用户的环境并提供更具上下文感知的帮助。
+This project implements the MCP protocol with window screenshot functionality, enabling Large Language Models (LLMs) to visually observe and interact with application UIs. By capturing screenshots of specific windows, LLMs can better understand the user's environment and provide more context-aware assistance.
 
-## 特性
+## Features
 
-- 支持在Windows、macOS和Linux上列出所有活动窗口
-- 捕获特定应用程序窗口的截图
-- 通过MCP协议将窗口截图发送给LLM
-- 与Cursor的agent模式集成
+- List all active windows on Windows, macOS, and Linux
+- Capture screenshots of specific application windows
+- Send window screenshots to LLMs via the MCP protocol
+- Integrate with Cursor's agent mode
 
-## 安装设置
+## Installation
 
-1. 安装依赖:
+1. Install dependencies:
    ```
    pip install -r requirements.txt
    ```
 
-2. 平台特定的要求:
+2. Platform-specific requirements:
    - Windows: `pip install pygetwindow`
    - Linux: `sudo apt-get install xdotool imagemagick`
-   - macOS: 需要向终端/IDE授予屏幕录制权限
-     - 首次运行时，系统会询问是否允许应用程序录制屏幕
-     - 也可以在 系统设置 > 隐私与安全性 > 屏幕录制 中手动授权
-     - 如果使用的是IDE（如VS Code），请确保为IDE授予权限
+   - macOS: Terminal/IDE needs screen recording permissions
+     - The system will ask for permission on first run
+     - You can also manually grant permission in System Settings > Privacy & Security > Screen Recording
+     - If using an IDE (like VS Code), ensure the IDE has permission
 
-3. 运行窗口截图演示:
+3. Run the window screenshot demo:
    ```
    python winshot_demo.py
    ```
 
-## 在Cursor中使用
+## Using with Cursor
 
-要在Cursor的agent模式中使用窗口截图功能:
+To use window screenshot functionality in Cursor's agent mode:
 
-1. 启动MCP服务器:
+1. Start the MCP server:
    ```
-   python mcp_server.py
+   python mcp_sse_server.py
    ```
 
-2. 在Cursor中，可以在agent模式下使用以下命令:
-   - `list_windows()` - 列出所有可用窗口
-   - `capture_window("Window Title")` - 捕获具有给定标题的窗口的截图
-   - `capture_window(window_index)` - 通过索引捕获窗口的截图
+2. In Cursor, you can use the following commands in agent mode:
+   - `list_windows()` - List all available windows
+   - `capture_window("Window Title")` - Capture a screenshot of a window with the given title
+   - `capture_window(window_index)` - Capture a screenshot of a window by index
 
-## 项目结构
+## Project Structure
 
-- `winshot.py`: 核心窗口截图功能
-- `mcp_server.py`: 带有窗口截图支持的MCP服务器
-- `mcp_client.py`: MCP客户端实现
-- `cursor_mcp_adapter.py`: 连接Cursor与MCP的适配器
-- `cursor_winshot.py`: Cursor特定的窗口截图集成
-- `winshot_demo.py`: 展示窗口截图功能的演示脚本
+- `winshot.py`: Core window screenshot functionality
+- `mcp_sse_server.py`: MCP server with window screenshot support
+- `mcp_client.py`: MCP client implementation
+- `cursor_mcp_adapter.py`: Adapter connecting Cursor with MCP
+- `cursor_winshot.py`: Cursor-specific window screenshot integration
+- `winshot_demo.py`: Demo script showcasing window screenshot functionality
 
-## 演示
+## Demo
 
-运行 `python winshot_demo.py` 将启动一个交互式演示，它会:
-1. 列出系统上所有可用的窗口
-2. 允许您选择要截图的窗口
-3. 启动截图过程，**注意：当前版本可能需要您手动点击要截图的窗口**
+Running `python winshot_demo.py` will start an interactive demo that:
+1. Lists all available windows on your system
+2. Allows you to select a window to screenshot
+3. Initiates the screenshot process (**Note: Current version may require you to manually click on the window to be captured**)
 
-截图过程中的交互提示是macOS安全机制的一部分，这确保了用户对屏幕捕获有控制权。截图保存在当前目录中，文件名以 `window_shot_` 开头。
+The interactive prompts during the screenshot process are part of macOS security mechanisms, ensuring user control over screen capture. Screenshots are saved in the current directory with filenames starting with `window_shot_`.
 
-## 截图问题排查
+## Troubleshooting Screenshot Issues
 
-如果您在macOS上遇到截图问题:
+If you encounter issues with screenshots on macOS:
 
-1. 确认屏幕录制权限已授予给终端或IDE
-2. **在截图过程中，当系统提示时，请点击您想要截图的窗口**
-3. 尝试不同的截图方法：代码会自动尝试三种不同的方法
-4. 对于无法自动捕获的窗口，可能需要修改 `winshot.py` 中的截图参数
+1. Confirm screen recording permission is granted to your terminal or IDE
+2. **During the screenshot process, click on the window you want to capture when prompted**
+3. Try different screenshot methods: the code automatically attempts three different methods
+4. For windows that cannot be captured automatically, you may need to modify the screenshot parameters in `winshot.py`
 
-### 已知限制
+### Known Limitations
 
-- **需要用户干预**：当前版本在macOS上可能需要用户手动点击窗口以完成截图。这是系统安全限制的结果，目前被认为是可接受的。
-- 某些窗口可能无法通过ID定位，此时会尝试捕获前台窗口。
-- 某些应用的窗口可能无法正确捕获，特别是那些使用非标准窗口管理的应用。
+- **User intervention required**: The current version on macOS may require manual window clicking to complete the screenshot. This is a result of system security limitations and is currently considered acceptable.
+- Some windows may not be locatable by ID, in which case the foreground window will be captured.
+- Some applications' windows may not be captured correctly, especially those using non-standard window management.
 
-## 协议详情
+## Protocol Details
 
-该实现扩展了MCP协议，增加了窗口截图特定的消息类型:
+This implementation extends the MCP protocol by adding specific message types for window screenshots:
 
-- `window_list_request`/`window_list_response`: 用于列出可用窗口
-- `window_screenshot_request`/`window_screenshot_response`: 用于捕获截图
-
-有关完整的协议文档，请参阅 `mcp_protocol.md`。 
+- `window_list_request`/`window_list_response`: Used to list available windows
+- `window_screenshot_request`/`window_screenshot_response`: Used to capture screenshots 
