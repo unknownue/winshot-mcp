@@ -351,13 +351,14 @@ def list_windows() -> Dict[str, Any]:
         }
 
 @mcp.tool()
-def capture_window(app_name: str) -> Dict[str, Any]:
+def capture_window(app_name: str, delay: float = 0.0) -> Dict[str, Any]:
     """
     Capture screenshot of a specific application window using fuzzy matching.
     Will use the first matching window if multiple matches are found.
     
     Args:
         app_name: Name or partial name of the application to capture
+        delay: Delay in seconds before capturing the screenshot
         
     Returns:
         A dictionary containing the URI to the screenshot and format
@@ -388,6 +389,11 @@ def capture_window(app_name: str) -> Dict[str, Any]:
         window_title = matching_window["title"]
         
         logger.info(f"Found window ID {window_id} for query '{app_name}' (process: {matching_window['process']}, title: {window_title})")
+        
+        # Delay before capturing
+        if delay > 0:
+            logger.info(f"Delaying screenshot capture by {delay} seconds")
+            time.sleep(delay)
         
         # Capture window screenshot
         image_data = window_shot.capture_window(window_id)
