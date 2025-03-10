@@ -337,14 +337,27 @@ def list_windows() -> Dict[str, Any]:
     """
     try:
         windows = window_shot.get_window_list()
+        
+        # Optimize return structure to clearly distinguish between process name and window title
+        formatted_windows = []
+        for window in windows:
+            formatted_window = {
+                "id": window["id"],                  # Original ID, format: "process_name:window_title"
+                "process_name": window["process"],   # Process name
+                "window_title": window["title"],     # Window title
+            }
+            formatted_windows.append(formatted_window)
+            
         return {
-            "windows": windows
+            "windows": formatted_windows,
+            "count": len(formatted_windows)
         }
     except Exception as e:
         logger.error(f"Error listing windows: {str(e)}")
         return {
             "error": f"Failed to list windows: {str(e)}",
-            "windows": []
+            "windows": [],
+            "count": 0
         }
 
 @mcp.tool()
@@ -366,11 +379,18 @@ def capture_window(app_name: str, delay: float = 0.0) -> Dict[str, Any]:
         
         # Find first matching window (case insensitive)
         matching_window = None
+        match_type = None
+        
         for window in windows:
-            # Check both process name and window title for matches
-            if (app_name.lower() in window["process"].lower() or 
-                app_name.lower() in window["title"].lower()):
+            # First priority: match process name
+            if app_name.lower() in window["process"].lower():
                 matching_window = window
+                match_type = "process_name"
+                break
+            # Second priority: match window title
+            elif app_name.lower() in window["title"].lower():
+                matching_window = window
+                match_type = "window_title"
                 break
         
         # If no match found, return error
@@ -379,13 +399,18 @@ def capture_window(app_name: str, delay: float = 0.0) -> Dict[str, Any]:
             return {
                 "error": f"No windows found matching: {app_name}",
                 "uri": None,
-                "format": None
+                "format": None,
+                "match_details": {
+                    "query": app_name,
+                    "match_found": False
+                }
             }
         
         window_id = matching_window["id"]
         window_title = matching_window["title"]
+        process_name = matching_window["process"]
         
-        logger.info(f"Found window ID {window_id} for query '{app_name}' (process: {matching_window['process']}, title: {window_title})")
+        logger.info(f"Found window ID {window_id} for query '{app_name}' (matched by: {match_type}, process: {process_name}, title: {window_title})")
         
         # Delay before capturing
         if delay > 0:
@@ -401,7 +426,15 @@ def capture_window(app_name: str, delay: float = 0.0) -> Dict[str, Any]:
             return {
                 "error": "Failed to capture screenshot",
                 "uri": None,
-                "format": None
+                "format": None,
+                "match_details": {
+                    "query": app_name,
+                    "match_found": True,
+                    "match_type": match_type,
+                    "process_name": process_name,
+                    "window_title": window_title,
+                    "capture_success": False
+                }
             }
         
         # Save screenshot to temporary directory and get hash
@@ -421,18 +454,29 @@ def capture_window(app_name: str, delay: float = 0.0) -> Dict[str, Any]:
             "uri": screenshot_uri,
             "format": "png",
             "window_id": window_id,
+            "process_name": process_name,
             "window_title": window_title,
-            "process": matching_window["process"],
             "hash": file_hash,
             "local_file_path": absolute_file_path,
-            "cursor_syntax": f"@{absolute_file_path}"
+            "cursor_syntax": f"@{absolute_file_path}",
+            "match_details": {
+                "query": app_name,
+                "match_found": True,
+                "match_type": match_type,
+                "capture_success": True
+            }
         }
     except Exception as e:
         logger.error(f"Error capturing window for query '{app_name}': {str(e)}")
         return {
             "error": f"Failed to capture window for query '{app_name}': {str(e)}",
             "uri": None,
-            "format": None
+            "format": None,
+            "match_details": {
+                "query": app_name,
+                "match_found": False,
+                "capture_success": False
+            }
         }
 
 # Signal handler for graceful shutdown
