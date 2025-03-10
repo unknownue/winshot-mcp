@@ -287,33 +287,73 @@ class WindowShot:
                 # Use pygetwindow library to capture Windows window
                 try:
                     import pygetwindow as gw
-                    window = gw.getWindowsWithTitle(window_id)[0]
-                    window.activate()
-                    time.sleep(0.5)  # Give window some time to activate
-                    screenshot = ImageGrab.grab(bbox=(window.left, window.top, 
-                                                     window.left+window.width, 
-                                                     window.top+window.height))
+                    import win32gui
+                    import win32con
                     
-                    # Resize image if needed
-                    if screenshot:
-                        width, height = screenshot.size
-                        logger.info(f"Original screenshot size: {width}x{height} pixels")
-                        if width > self.max_image_dimension or height > self.max_image_dimension:
-                            screenshot = self._safe_resize_image(screenshot)
+                    try:
+                        # Convert window_id to integer (it's the window handle)
+                        hwnd = int(window_id)
+                        
+                        # Verify the window exists and get its title
+                        window_title = win32gui.GetWindowText(hwnd)
+                        if not window_title:
+                            logger.error(f"No window found with handle: {hwnd}")
+                            return None
+                        
+                        # Bring window to front
+                        win32gui.ShowWindow(hwnd, win32con.SW_RESTORE)  # Restore if minimized
+                        win32gui.SetForegroundWindow(hwnd)  # Bring to front
+                        time.sleep(0.5)  # Give window some time to activate
+                        
+                        # Get the window rect
+                        rect = win32gui.GetWindowRect(hwnd)
+                        x, y, x2, y2 = rect
+                        
+                        # Add a small delay to ensure window is fully visible
+                        time.sleep(0.2)
+                        
+                        # Capture the specific window area
+                        screenshot = ImageGrab.grab(bbox=(x, y, x2, y2))
+                        
+                        # Resize image if needed
+                        if screenshot:
                             width, height = screenshot.size
-                            logger.info(f"Resized screenshot to: {width}x{height} pixels")
-                    
-                    # Save locally if requested
-                    if screenshot and self.save_locally:
-                        timestamp = int(time.time())
-                        filename = f"window_shot_{timestamp}.png"
-                        width, height = screenshot.size
-                        logger.info(f"Saving local screenshot ({width}x{height} pixels) to {filename}")
-                        self.save_screenshot(screenshot, filename)
-                    
-                    return screenshot
-                except ImportError:
-                    logger.error("pygetwindow library is not installed. Please install with: pip install pygetwindow")
+                            logger.info(f"Original screenshot size: {width}x{height} pixels")
+                            if width > self.max_image_dimension or height > self.max_image_dimension:
+                                screenshot = self._safe_resize_image(screenshot)
+                                width, height = screenshot.size
+                                logger.info(f"Resized screenshot to: {width}x{height} pixels")
+                        
+                        # Save locally if requested
+                        if screenshot and self.save_locally:
+                            timestamp = int(time.time())
+                            filename = f"window_shot_{timestamp}.png"
+                            width, height = screenshot.size
+                            logger.info(f"Saving local screenshot ({width}x{height} pixels) to {filename}")
+                            self.save_screenshot(screenshot, filename)
+                        
+                        return screenshot
+                        
+                    except ValueError as ve:
+                        logger.error(f"Invalid window handle: {window_id}")
+                        return None
+                    except Exception as grab_error:
+                        logger.warning(f"Failed to grab specific window: {grab_error}")
+                        logger.info("Falling back to full screen capture...")
+                        screenshot = ImageGrab.grab()
+                        return screenshot
+                        
+                except ImportError as import_error:
+                    logger.error(f"Required library not installed: {import_error}")
+                    logger.error("Please install required libraries with: pip install pygetwindow pywin32")
+                except Exception as e:
+                    logger.warning(f"Failed to capture specific window: {e}")
+                    logger.info("Falling back to full screen capture...")
+                    try:
+                        screenshot = ImageGrab.grab()
+                        return screenshot
+                    except Exception as grab_error:
+                        logger.error(f"Full screen capture also failed: {grab_error}")
             
             elif self.system == "Linux":
                 # Use xdotool and import to capture Linux window
