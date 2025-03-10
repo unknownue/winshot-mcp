@@ -353,10 +353,11 @@ def list_windows() -> Dict[str, Any]:
 @mcp.tool()
 def capture_window(app_name: str) -> Dict[str, Any]:
     """
-    Capture screenshot of a specific application window.
+    Capture screenshot of a specific application window using fuzzy matching.
+    Will use the first matching window if multiple matches are found.
     
     Args:
-        app_name: Name of the application to capture
+        app_name: Name or partial name of the application to capture
         
     Returns:
         A dictionary containing the URI to the screenshot and format
@@ -365,33 +366,28 @@ def capture_window(app_name: str) -> Dict[str, Any]:
         # Get list of windows
         windows = window_shot.get_window_list()
         
-        # Find window by application name (case insensitive)
-        window_id = None
-        window_title = None
+        # Find first matching window (case insensitive)
+        matching_window = None
         for window in windows:
-            if window["process"].lower() == app_name.lower():
-                window_id = window["id"]
-                window_title = window["title"]
+            # Check both process name and window title for matches
+            if (app_name.lower() in window["process"].lower() or 
+                app_name.lower() in window["title"].lower()):
+                matching_window = window
                 break
         
-        # If no exact match, try partial match
-        if window_id is None:
-            for window in windows:
-                if app_name.lower() in window["process"].lower():
-                    window_id = window["id"]
-                    window_title = window["title"]
-                    break
-        
-        # If still no match, return error
-        if window_id is None:
-            logger.error(f"No window found for application: {app_name}")
+        # If no match found, return error
+        if matching_window is None:
+            logger.error(f"No windows found matching: {app_name}")
             return {
-                "error": f"No window found for application: {app_name}",
+                "error": f"No windows found matching: {app_name}",
                 "uri": None,
                 "format": None
             }
         
-        logger.info(f"Found window ID {window_id} for application {app_name}")
+        window_id = matching_window["id"]
+        window_title = matching_window["title"]
+        
+        logger.info(f"Found window ID {window_id} for query '{app_name}' (process: {matching_window['process']}, title: {window_title})")
         
         # Capture window screenshot
         image_data = window_shot.capture_window(window_id)
@@ -423,14 +419,15 @@ def capture_window(app_name: str) -> Dict[str, Any]:
             "format": "png",
             "window_id": window_id,
             "window_title": window_title,
+            "process": matching_window["process"],
             "hash": file_hash,
-            "local_file_path": absolute_file_path,  # Add local file path for Cursor to use with @file syntax
-            "cursor_syntax": f"@{absolute_file_path}"  # Directly provide Cursor syntax format
+            "local_file_path": absolute_file_path,
+            "cursor_syntax": f"@{absolute_file_path}"
         }
     except Exception as e:
-        logger.error(f"Error capturing window for application {app_name}: {str(e)}")
+        logger.error(f"Error capturing window for query '{app_name}': {str(e)}")
         return {
-            "error": f"Failed to capture window for application {app_name}: {str(e)}",
+            "error": f"Failed to capture window for query '{app_name}': {str(e)}",
             "uri": None,
             "format": None
         }
