@@ -22,16 +22,14 @@ except ImportError:
 class LinuxWindowCapture:
     """Window capture implementation for Linux"""
     
-    def __init__(self, max_image_dimension=1200, save_locally=False):
+    def __init__(self, max_image_dimension=1200):
         """
         Initialize the Linux window capture utility
         
         Args:
             max_image_dimension: Maximum width or height of captured screenshots (in pixels)
-            save_locally: Whether to save screenshots locally (default: False)
         """
         self.max_image_dimension = max_image_dimension
-        self.save_locally = save_locally
     
     def get_window_list(self) -> List[Dict[str, str]]:
         """
@@ -100,14 +98,6 @@ class LinuxWindowCapture:
                         screenshot = self._safe_resize_image(screenshot)
                         width, height = screenshot.size
                         logger.info(f"Resized screenshot to: {width}x{height} pixels")
-                
-                # Save locally if requested
-                if screenshot and self.save_locally:
-                    timestamp = int(time.time())
-                    filename = f"window_shot_{timestamp}.png"
-                    width, height = screenshot.size
-                    logger.info(f"Saving local screenshot ({width}x{height} pixels) to {filename}")
-                    self._save_screenshot(screenshot, filename)
                 
                 # Clean up temp file
                 try:

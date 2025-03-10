@@ -31,26 +31,24 @@ from .platforms.utils import save_screenshot, safe_resize_image, get_screenshot_
 class WindowShot:
     """Window screenshot utility for capturing screenshots of specific application windows"""
     
-    def __init__(self, max_image_dimension=1200, max_file_size_mb=5, save_locally=False):
+    def __init__(self, max_image_dimension=1200, max_file_size_mb=5):
         """
         Initialize the window screenshot utility
         
         Args:
             max_image_dimension: Maximum width or height of captured screenshots (in pixels)
             max_file_size_mb: Maximum file size of captured screenshots (in MB)
-            save_locally: Whether to save screenshots locally (default: False)
         """
         self.system = platform.system()  # Get operating system type
         self.max_image_dimension = max_image_dimension
         self.max_file_size_bytes = max_file_size_mb * 1024 * 1024
-        self.save_locally = save_locally
         
         # Check for required dependencies
         if not HAS_PIL:
             logger.warning("PIL/Pillow is not installed. Image processing will fail.")
             
         # Initialize platform-specific implementation
-        self.platform_impl = PlatformWindowCapture(max_image_dimension, save_locally)
+        self.platform_impl = PlatformWindowCapture(max_image_dimension)
     
     def get_window_list(self) -> List[Dict[str, str]]:
         """
@@ -78,14 +76,6 @@ class WindowShot:
         
         # Use platform-specific implementation to capture the window
         screenshot = self.platform_impl.capture_window(window_id)
-        
-        # Save locally if requested
-        if screenshot and self.save_locally:
-            timestamp = int(time.time())
-            filename = f"window_shot_{timestamp}.png"
-            width, height = screenshot.size
-            logger.info(f"Saving local screenshot ({width}x{height} pixels) to {filename}")
-            self.save_screenshot(screenshot, filename)
         
         return screenshot
     

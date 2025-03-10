@@ -43,8 +43,6 @@ parser.add_argument('--max-image-dimension', type=int, default=1920,
                    help='Maximum dimension (width or height) for screenshots in pixels')
 parser.add_argument('--max-file-size-mb', type=int, default=5, 
                    help='Maximum file size for screenshots in MB')
-parser.add_argument('--save-locally', action='store_true', default=False,
-                   help='Whether to save screenshots locally on the server')
 parser.add_argument('--tmp-dir', type=str, default=None,
                    help='Custom temporary directory for screenshots (defaults to system temp dir)')
 parser.add_argument('--file-expiry-minutes', type=int, default=60,
@@ -315,8 +313,7 @@ class ScreenshotFileServer:
 # Initialize WindowShot with configuration
 window_shot = WindowShot(
     max_image_dimension=args.max_image_dimension,
-    max_file_size_mb=args.max_file_size_mb,
-    save_locally=args.save_locally
+    max_file_size_mb=args.max_file_size_mb
 )
 
 # Initialize screenshot manager and file server
@@ -456,7 +453,6 @@ def main():
     logger.info(f"File server running on port {fileserver_port}")
     logger.info(f"Maximum image dimension: {args.max_image_dimension}px")
     logger.info(f"Maximum file size: {args.max_file_size_mb}MB")
-    logger.info(f"Save screenshots locally: {args.save_locally}")
     logger.info(f"Screenshot file expiry: {args.file_expiry_minutes} minutes")
     logger.info(f"SSE endpoint: http://localhost:{port}/sse")
     logger.info("Press Ctrl+C to stop the server")
